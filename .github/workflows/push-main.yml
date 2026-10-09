@@ -88,12 +88,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # the release token, since a tag pushed with GITHUB_TOKEN would not start the release workflow
+      # the deploy key pushes over ssh, since a tag pushed with GITHUB_TOKEN would not start the release workflow
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PAT }}
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Setup Rust
         uses: jdx/mise-action@v3
