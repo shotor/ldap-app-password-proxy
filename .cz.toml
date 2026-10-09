@@ -1,5 +1,5 @@
 [tool.commitizen]
-version = "0.0.0"
+version = "0.1.0"
 version_files = ["Cargo.toml:^version"]
 tag_format = "$version"
 update_changelog_on_bump = true

@@ -1,6 +1,6 @@
 [package]
 name = "ldap-app-password-proxy"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 license = "ISC"
 description = "An LDAP proxy that checks binds against an app password's argon2id hash instead of the directory password"
