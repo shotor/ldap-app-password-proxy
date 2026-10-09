@@ -1,0 +1,126 @@
+name: Push Main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# a newer push waits for the running one, so the bump of one never races the next
+concurrency:
+  group: push-main
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: ${{ !startsWith(github.event.head_commit.message, 'bump:') }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      bump: ${{ steps.check.outputs.bump }}
+      version: ${{ steps.check.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+          cache: pip
+          cache-dependency-path: .github/requirements.txt
+
+      - name: Install commitizen
+        run: pip install -r .github/requirements.txt
+
+      - name: Next version
+        id: check
+        run: |
+          # exit 21 is commitizen's NoneIncrementExit: nothing releasable since the last tag
+          if out=$(cz bump --dry-run --yes 2>&1); then
+            version=$(echo "$out" | grep -oP 'version .* → \K[0-9]+\.[0-9]+\.[0-9]+')
+            echo "bump=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          else
+            rc=$?
+            [ "$rc" -eq 21 ] || { echo "$out"; exit "$rc"; }
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  check:
+    needs: version
+    if: ${{ needs.version.outputs.bump == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: jdx/mise-action@v3
+
+      - name: Rust components
+        run: rustup component add rustfmt clippy
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Lint
+        run: cargo lint-fmt && cargo lint-clippy
+
+      - name: Test
+        run: cargo test --locked
+
+  bump:
+    needs: [version, check]
+    runs-on: ubuntu-latest
+
+    steps:
+      # the release token, since a tag pushed with GITHUB_TOKEN would not start the release workflow
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Setup Rust
+        uses: jdx/mise-action@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+          cache: pip
+          cache-dependency-path: .github/requirements.txt
+
+      - name: Install commitizen
+        run: pip install -r .github/requirements.txt
+
+      - name: Bump to ${{ needs.version.outputs.version }}
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          cz bump --changelog --yes
+
+          # Cargo.lock records the crate's own version, and --locked builds refuse a mismatch
+          cargo update --workspace
+          git add Cargo.lock
+          git commit --amend --no-edit
+          git tag -f "$VERSION"
+
+          git push origin HEAD:main "refs/tags/$VERSION"

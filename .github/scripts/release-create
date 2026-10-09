@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -e
+
+VERSION=$1
+
+if [ -z "$VERSION" ]; then
+  echo "release-create: no version given" >&2
+  exit 1
+fi
+
+if gh release view "$VERSION" >/dev/null 2>&1; then
+  echo "release-create: release $VERSION already exists"
+  exit 0
+fi
+
+NOTES=$(mktemp)
+trap 'rm -f "$NOTES"' EXIT
+
+cz changelog "$VERSION" --dry-run \
+  | sed '/^## /d' \
+  | sed '/./,$!d' > "$NOTES"
+
+gh release create "$VERSION" --title "$VERSION" --notes-file "$NOTES" --verify-tag

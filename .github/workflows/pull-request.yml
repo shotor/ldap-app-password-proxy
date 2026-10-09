@@ -1,0 +1,44 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: jdx/mise-action@v3
+
+      - name: Rust components
+        run: rustup component add rustfmt clippy
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Lint
+        run: cargo lint-fmt && cargo lint-clippy
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Image
+        run: docker build -t ldap-app-password-proxy:ci .

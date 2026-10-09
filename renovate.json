@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "cargo, the Dockerfile's FROM pins, mise's rust, commitizen and the workflows' actions, all default managers; fix commits, so a merged bump releases the image",
+  "dependencyDashboard": true,
+  "labels": ["renovate"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null
+  },
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps",
+  "packageRules": [
+    {
+      "description": "workflow and release tooling updates release nothing",
+      "matchManagers": ["github-actions", "pip_requirements"],
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "the toolchain in mise.toml and the build image move together",
+      "matchDepNames": ["rust"],
+      "groupName": "rust"
+    }
+  ]
+}

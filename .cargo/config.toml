@@ -1,0 +1,7 @@
+# Repo commands, run `cargo <alias>` from anywhere in the repository; aliases cannot chain, so the
+# full lint pass is `cargo lint-fmt && cargo lint-clippy`.
+[alias]
+lint-fmt = "fmt --all -- --check"
+lint-fmt-fix = "fmt --all"
+lint-clippy = "clippy --all-targets --all-features -- -D warnings"
+lint-clippy-fix = "clippy --all-targets --all-features --fix --allow-dirty --allow-staged -- -D warnings"
